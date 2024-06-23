@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
 set(USE_CONAN "FALSE" CACHE BOOL "...")
 set(USE_CUBE "FALSE" CACHE BOOL "...")
+set(USE_CUBE_COPY "FALSE" CACHE BOOL "...")
 set(SKIP_TEST "TRUE" CACHE BOOL "...")
 set(TEST_GROUP "all" CACHE STRING "...")
 set(TEST_CASE "all" CACHE STRING "...")
@@ -390,44 +391,46 @@ if("${USE_CUBE}" AND NOT EXISTS "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}")
         COMMAND_ERROR_IS_FATAL ANY
     )
 
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/s/${BASE_DIR}")
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
+    if("${USE_CUBE_COPY}")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/s/${BASE_DIR}")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
 
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Core" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Drivers" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Middlewares" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/USB_DEVICE" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Core" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Drivers" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/Middlewares" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/USB_DEVICE" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}")
 
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx")
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS")
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver")
-    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver")
+        file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library")
 
-    file(
-        COPY "src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt"
-        DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx"
-    )
-    file(
-        COPY "src/main/c/${BASE_DIR}/Drivers/CMSIS/LICENSE.txt"
-        DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS"
-    )
-    file(
-        COPY "src/main/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt"
-        DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver"
-    )
-    file(
-        COPY "src/main/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt"
-        DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library"
-    )
+        file(
+            COPY "src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt"
+            DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx"
+        )
+        file(
+            COPY "src/main/c/${BASE_DIR}/Drivers/CMSIS/LICENSE.txt"
+            DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/CMSIS"
+        )
+        file(
+            COPY "src/main/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt"
+            DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver"
+        )
+        file(
+            COPY "src/main/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt"
+            DESTINATION "${PROJECT_SOURCE_DIR}/src/main/resources/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library"
+        )
 
-    file(REMOVE "src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt") # remove license file
-    file(REMOVE "src/main/c/${BASE_DIR}/Drivers/CMSIS/LICENSE.txt") # remove license file
-    file(REMOVE "src/main/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt") # remove license file
-    file(REMOVE "src/main/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt") # remove license file
-    file(REMOVE_RECURSE "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/Source") # remove empty dir
+        file(REMOVE "src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt") # remove license file
+        file(REMOVE "src/main/c/${BASE_DIR}/Drivers/CMSIS/LICENSE.txt") # remove license file
+        file(REMOVE "src/main/c/${BASE_DIR}/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt") # remove license file
+        file(REMOVE "src/main/c/${BASE_DIR}/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt") # remove license file
+        file(REMOVE_RECURSE "${PROJECT_SOURCE_DIR}/src/main/c/${BASE_DIR}/Drivers/CMSIS/Device/ST/STM32H7xx/Source") # remove empty dir
 
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/startup_stm32h7a3xxq.s" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/s/${BASE_DIR}")
-    file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/STM32H7A3ZITxQ_FLASH.ld" DESTINATION "${PROJECT_SOURCE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/startup_stm32h7a3xxq.s" DESTINATION "${PROJECT_SOURCE_DIR}/src/main/s/${BASE_DIR}")
+        file(COPY "${CUBE_OUTPUT_DIR}/${PROJECT_NAME}/STM32H7A3ZITxQ_FLASH.ld" DESTINATION "${PROJECT_SOURCE_DIR}")
+    endif()
 endif()
 
 if("gcc-arm" IN_LIST PRESET_NAME_ELEMENTS)
