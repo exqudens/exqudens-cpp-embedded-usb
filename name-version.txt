@@ -1,0 +1,1 @@
+exqudens-cpp-embedded-usb: 1.0.0
