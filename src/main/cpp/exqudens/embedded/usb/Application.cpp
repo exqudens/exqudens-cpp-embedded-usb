@@ -1,4 +1,6 @@
+#include <cstring>
 #include <cstdlib>
+#include <algorithm>
 
 #include "exqudens/embedded/usb/Application.hpp"
 
@@ -73,12 +75,21 @@ namespace exqudens {
     }
 
     uint32_t Application::usbCallback(std::array<uint8_t, 1024>& buffer, uint32_t size) {
-        for (uint32_t i = 0; i < size; i++) {
-            if (buffer[i] >= 'a' && buffer[i] <= 'z') {
-                buffer[i] -= ('a' - 'A');
+        char string[1025] = "";
+        std::copy(buffer.begin(), buffer.end(), string);
+        if (std::strcmp("Hello", string) == 0) {
+            buffer.fill(0);
+            buffer.at(0) = 'H';
+            buffer.at(1) = 'i';
+            return 2;
+        } else {
+            for (uint32_t i = 0; i < size; i++) {
+                if (buffer.at(i) >= 'a' && buffer.at(i) <= 'z') {
+                    buffer.at(i) -= ('a' - 'A');
+                }
             }
+            return size;
         }
-        return size;
     }
 
 }
