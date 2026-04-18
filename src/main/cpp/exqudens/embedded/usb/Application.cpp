@@ -1,78 +1,84 @@
 #include <cstdlib>
-#include <exception>
 
 #include "exqudens/embedded/usb/Application.hpp"
-#include "exqudens/embedded/usb/Hardware.hpp"
 
-namespace exqudens::embedded::usb {
+#ifdef USE_HAL_DRIVER
+#include <optional>
 
-    Application& Application::getInstance() {
-        static Application instance;
-        return instance;
-    }
+#include "exqudens/embedded/usb/hal/Hardware.hpp"
+#endif
 
-    Application& Application::setRunning(bool value) {
-        running = value;
-        return *this;
-    }
-
-    Application& Application::setHal(const std::shared_ptr<IHardware> value) {
-        hal = value;
-        return *this;
-    }
-
-    std::shared_ptr<IHardware> Application::getHal() {
-        return hal;
-    }
+namespace exqudens {
 
     int Application::run() {
-        try {
-            bool halDeleteRequired = false;
+        int result = EXIT_SUCCESS;
 
-            if (hal == nullptr) {
-                hal = std::shared_ptr<Hardware>(new Hardware());
-                halDeleteRequired = true;
-            }
+#ifdef USE_HAL_DRIVER
+        std::optional<Hardware> optionalHardware = {};
 
-            int result = hal->mainInit();
-
-            if (result != EXIT_SUCCESS) {
-                if (halDeleteRequired) {
-                    hal.reset();
-                    hal = nullptr;
-                }
-                return result;
-            }
-
-            unsigned int shortMax = 4;
-            unsigned int shortIndex = 0;
-            do {
-                if (shortIndex + 1 == shortMax) {
-                    hal->delay(3000u);
-                } else {
-                    hal->setLedState(1, true);
-                    hal->delay(500u);
-                    hal->setLedState(1, false);
-                    hal->delay(500u);
-                }
-                shortIndex = (shortIndex + 1) % shortMax;
-            } while (running);
-
-            if (halDeleteRequired) {
-                hal.reset();
-                hal = nullptr;
-            }
-
-            return result;
-        } catch (const std::exception& e) {
-            return EXIT_FAILURE;
-        } catch (...) {
-            return EXIT_FAILURE;
+        if (!hardware) {
+            optionalHardware.emplace(Hardware());
+            hardware = &optionalHardware.value();
         }
+#endif
+
+        if (!hardware) {
+            result = EXIT_FAILURE;
+            return result;
+        }
+
+        hardware->setUsbReceiveCallback(&Application::usbCallback);
+
+        if (!hardware->getUsbReceiveCallback()) {
+            result = EXIT_FAILURE;
+            return result;
+        }
+
+        result = hardware->mainInit();
+
+        if (result != EXIT_SUCCESS) {
+            return result;
+        }
+
+        while (true) {
+            if (!hardware->getGreenLedState()) {
+                hardware->setGreenLedState(true);
+                hardware->delay(500);
+                hardware->setGreenLedState(false);
+                hardware->delay(500);
+            }
+            if (!hardware->getYellowLedState()) {
+                hardware->setYellowLedState(true);
+                hardware->delay(500);
+                hardware->setYellowLedState(false);
+                hardware->delay(500);
+            }
+            if (!hardware->getRedLedState()) {
+                hardware->setRedLedState(true);
+                hardware->delay(500);
+                hardware->setRedLedState(false);
+                hardware->delay(500);
+            }
+
+            hardware->delay(2000);
+        }
+
+        hardware = nullptr;
+
+        return result;
     }
 
-    Application::Application() = default;
+    IHardware* Application::getHardware() {
+        return hardware;
+    }
 
-    Application::~Application() = default;
+    uint32_t Application::usbCallback(std::array<uint8_t, 1024>& buffer, uint32_t size) {
+        for (uint32_t i = 0; i < size; i++) {
+            if (buffer[i] >= 'a' && buffer[i] <= 'z') {
+                buffer[i] -= ('a' - 'A');
+            }
+        }
+        return size;
+    }
 
 }

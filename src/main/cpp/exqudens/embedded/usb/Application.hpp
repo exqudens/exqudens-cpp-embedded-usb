@@ -1,34 +1,30 @@
 #pragma once
 
-#include <memory>
+#include <cstdint>
+#include <array>
 
-#include "exqudens/embedded/usb/IHardware.hpp"
+#include "exqudens/embedded/usb/export.hpp"
+#include "exqudens/embedded/usb/hal/IHardware.hpp"
 
-namespace exqudens::embedded::usb {
+namespace exqudens {
 
-    class Application {
+    class EXQUDENS_EMBEDDED_USB_EXPORT Application {
 
         private:
 
-            std::shared_ptr<IHardware> hal = nullptr;
-            bool running = true;
+            inline static IHardware* hardware = nullptr;
 
         public:
 
-            static Application& getInstance();
+            static int run();
 
-            Application& setRunning(bool value);
+            static IHardware* getHardware();
 
-            Application& setHal(const std::shared_ptr<IHardware> value = nullptr);
-            std::shared_ptr<IHardware> getHal();
+            static uint32_t usbCallback(std::array<uint8_t, 1024>& buffer, uint32_t size);
 
-            int run();
+            Application() = delete;
 
-        private:
-
-            Application();
-
-            ~Application();
+            ~Application() = delete;
 
     };
 

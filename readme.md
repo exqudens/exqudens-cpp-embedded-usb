@@ -1,6 +1,7 @@
 # exqudens-cpp-embedded-usb
 
-- Uses board: NUCLEO-H7A3ZI-Q with MCU: STM32H7A3ZI
+- Uses board: `NUCLEO-H7A3ZI-Q`
+- Uses MCU: `STM32H7A3ZI`
 - Requires: `cmake`, `ninja`, `STM32CubeMX`, `openocd`
 
 ##### How To Generate
@@ -28,7 +29,7 @@ cmake --build --preset windows.ninja.gcc-arm.debug.static --target cmake-flash-w
 
 ##### Tests
 
-Device VID: `0x0483 (1155)`
+Device VID: `0x0484 (1156)`
 Device PID: `0x5741 (22337)`
 File: `src/main/c/exqudens/embedded/usb/USB_DEVICE/App/usbd_desc.c`
 
