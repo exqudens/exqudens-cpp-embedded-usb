@@ -14,7 +14,9 @@
 #include "TestUtils.hpp"
 
 // include test files
-#include "unit/FunctionalUnitTests.hpp"
+#include "unit/UnitTests.hpp"
+
+#include "system/SystemTests.hpp"
 
 #define CALL_INFO std::string(__FUNCTION__) + "(" + std::filesystem::path(__FILE__).filename().string() + ":" + std::to_string(__LINE__) + ")"
 
@@ -29,12 +31,13 @@ int TestApplication::run(int argc, char** argv) {
         TestUtils::init(args);
 
         // logging
-        std::filesystem::path executableDir(TestUtils::getExecutableDir().value());
+        std::filesystem::path executableDir = std::filesystem::path(args.at(0)).parent_path();
         std::string loggingFile = (executableDir / "log" / "log.txt").generic_string();
         size_t loggingFileSize = 1073741824; // 1 gb
         std::set<std::string> loggerIdSet = {
             LOGGER_ID,
-            FunctionalUnitTests::LOGGER_ID
+            UnitTests::LOGGER_ID,
+            SystemTests::LOGGER_ID
         };
         std::string loggingConfigResult = exqudens::Log::configure(loggingFile, loggingFileSize, loggerIdSet);
 

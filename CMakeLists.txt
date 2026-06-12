@@ -7,13 +7,16 @@ message(STATUS "USE_CONAN: '${USE_CONAN}'")
 
 string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
 if("${USE_CONAN}")
-    message(STATUS "USE_CONAN: '${USE_CONAN}'")
     if("windows" IN_LIST "PRESET_NAME_ELEMENTS")
         find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
     else()
         find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
     endif()
     message(STATUS "CONAN_COMMAND: '${CONAN_COMMAND}'")
+    set(CONAN_USER "exqudens" CACHE STRING "...")
+    set(CONAN_CHANNEL "development" CACHE STRING "...")
+    message(STATUS "CONAN_USER: '${CONAN_USER}'")
+    message(STATUS "CONAN_CHANNEL: '${CONAN_CHANNEL}'")
 endif()
 
 if("${CMAKE_UTIL_FILE}" STREQUAL "")
@@ -28,7 +31,7 @@ if("${CMAKE_UTIL_FILE}" STREQUAL "")
                     COMMAND_ERROR_IS_FATAL "ANY"
                 )]]
                 execute_process(
-                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/0.0.1" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
+                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/0.0.1@${CONAN_USER}/${CONAN_CHANNEL}" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
                     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
                     COMMAND_ECHO "STDOUT"
                     ENCODING "UTF-8"
@@ -70,6 +73,16 @@ elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
             OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-toolchain.cmake"
         )
     endif()
+elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/clang-toolchain.cmake")
+        find_file(COMPILER_FILE NAMES "clang.exe" "clang" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        set_clang_toolchain(TOOLCHAIN_CONTENT
+            PROCESSOR "x86_64"
+            OS "${CMAKE_HOST_SYSTEM_NAME}"
+            PATH "${COMPILER_FILE}"
+            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/clang-toolchain.cmake"
+        )
+    endif()
 elseif("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-arm-toolchain.cmake")
         find_file(COMPILER_FILE NAMES "arm-none-eabi-gcc.exe" "arm-none-eabi-gcc" PATHS ENV GCC_ARM_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
@@ -77,6 +90,7 @@ elseif("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
             PROCESSOR "armv7"
             OS "Generic"
             PATH "${COMPILER_FILE}"
+            TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY"
             OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-arm-toolchain.cmake"
         )
     endif()
@@ -110,6 +124,9 @@ include("CMakePackageConfigHelpers")
 enable_testing()
 include("GoogleTest")
 
+message(STATUS "CMAKE_C_COMPILER: '${CMAKE_C_COMPILER}'")
+message(STATUS "CMAKE_CXX_COMPILER: '${CMAKE_CXX_COMPILER}'")
+
 if("${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT}")
     set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/cmake-install" CACHE PATH "..." FORCE)
 endif()
@@ -142,17 +159,75 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH "0")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "0")
 set(CMAKE_CXX_VISIBILITY_PRESET "hidden") # "default" or "hidden"
 set(CMAKE_VISIBILITY_INLINES_HIDDEN "1")
-set(CMAKE_C_STANDARD "11")
-set(CMAKE_C_STANDARD_REQUIRED "1")
-set(CMAKE_C_EXTENSIONS "1")
 if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+    set(CMAKE_C_STANDARD "11")
+    set(CMAKE_C_STANDARD_REQUIRED "1")
+    set(CMAKE_C_EXTENSIONS "1")
+
     set(CMAKE_CXX_STANDARD "17")
     set(CMAKE_CXX_STANDARD_REQUIRED "1")
     set(CMAKE_CXX_EXTENSIONS "1")
+
     set(CMAKE_EXECUTABLE_SUFFIX_ASM ".elf")
     set(CMAKE_EXECUTABLE_SUFFIX_C ".elf")
     set(CMAKE_EXECUTABLE_SUFFIX_CXX ".elf")
+
+    # MCU specific flags
+    string(JOIN " " TARGET_FLAGS
+        "-mcpu=cortex-m7"
+        "-mfpu=fpv5-d16"
+        "-mfloat-abi=hard"
+    )
+
+    string(JOIN " " CMAKE_C_FLAGS
+        "${CMAKE_C_FLAGS}"
+        "${TARGET_FLAGS}"
+    )
+    string(JOIN " " CMAKE_ASM_FLAGS
+        "${CMAKE_C_FLAGS}"
+        "-x"
+        "assembler-with-cpp"
+        "-MMD"
+        "-MP"
+    )
+    string(JOIN " " CMAKE_C_FLAGS
+        "${CMAKE_C_FLAGS}"
+        "-Wall"
+        "-fdata-sections"
+        "-ffunction-sections"
+        "-fstack-usage"
+        # The cyclomatic-complexity parameter must be defined for the Cyclomatic complexity feature in STM32CubeIDE to work.
+        # However, most GCC toolchains do not support this option, which causes a compilation error; for this reason, the feature is disabled by default.
+        #"-fcyclomatic-complexity"
+    )
+    string(JOIN " " CMAKE_CXX_FLAGS
+        "${CMAKE_C_FLAGS}"
+        "-fno-rtti"
+        "-fno-exceptions"
+        "-fno-threadsafe-statics"
+    )
+
+    string(JOIN " " CMAKE_C_FLAGS_DEBUG "-O0" "-g3")
+    string(JOIN " " CMAKE_C_FLAGS_RELEASE "-Os" "-g0")
+    string(JOIN " " CMAKE_CXX_FLAGS_DEBUG "-O0" "-g3")
+    string(JOIN " " CMAKE_CXX_FLAGS_RELEASE "-Os" "-g0")
+
+    #[[string(JOIN " " CMAKE_EXE_LINKER_FLAGS
+        "${TARGET_FLAGS}"
+        "-T"
+        "\"${CMAKE_SOURCE_DIR}/STM32H7A3XX_FLASH.ld\""
+        "--specs=nano.specs"
+        "-Wl,-Map=${CMAKE_PROJECT_NAME}.map"
+        "-Wl,--gc-sections"
+        "-Wl,--print-memory-usage"
+    )]]
+
+    #set(TOOLCHAIN_LINK_LIBRARIES "m")
 else()
+    set(CMAKE_C_STANDARD "11")
+    set(CMAKE_C_STANDARD_REQUIRED "1")
+    set(CMAKE_C_EXTENSIONS "0")
+
     set(CMAKE_CXX_STANDARD "20")
     set(CMAKE_CXX_STANDARD_REQUIRED "1")
     set(CMAKE_CXX_EXTENSIONS "0")
@@ -231,6 +306,27 @@ if("${USE_CONAN}")
         "*:shared=${CONAN_BUILD_SHARED_LIBS}"
     )
     if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+        if("${CONAN_OS}" STREQUAL "Windows" AND "clang" IN_LIST "PRESET_NAME_ELEMENTS")
+            list(APPEND "CONAN_SETTINGS"
+                "--settings" "gtest/*:compiler=msvc"
+                "--settings" "gtest/*:compiler.version=194"
+                "--settings" "gtest/*:compiler.runtime=${CONAN_COMPILER_RUNTIME}"
+                "--settings" "gtest/*:compiler.runtime_type=${CONAN_COMPILER_RUNTIME_TYPE}"
+                "--settings" "gtest/*:compiler.cppstd=20"
+
+                "--settings" "exqudens-cpp-usb/*:compiler=msvc"
+                "--settings" "exqudens-cpp-usb/*:compiler.version=194"
+                "--settings" "exqudens-cpp-usb/*:compiler.runtime=${CONAN_COMPILER_RUNTIME}"
+                "--settings" "exqudens-cpp-usb/*:compiler.runtime_type=${CONAN_COMPILER_RUNTIME_TYPE}"
+                "--settings" "exqudens-cpp-usb/*:compiler.cppstd=20"
+
+                "--settings" "libusb/*:compiler=msvc"
+                "--settings" "libusb/*:compiler.version=194"
+                "--settings" "libusb/*:compiler.runtime=${CONAN_COMPILER_RUNTIME}"
+                "--settings" "libusb/*:compiler.runtime_type=${CONAN_COMPILER_RUNTIME_TYPE}"
+                "--settings" "libusb/*:compiler.cppstd=20"
+            )
+        endif()
         if(NOT EXISTS "${CONAN_INSTALL_PREFIX}/test/conan-packages.cmake")
             #[[execute_process(
                 COMMAND "${CONAN_COMMAND}" "user" "$ENV{CONAN_LOGIN_USERNAME}" "-r" "artifactory" "-p"
@@ -242,6 +338,8 @@ if("${USE_CONAN}")
             execute_process(
                 COMMAND "${CONAN_COMMAND}" "install"
                         "--output-folder" "${CONAN_INSTALL_PREFIX}/test"
+                        "--user" "${CONAN_USER}"
+                        "--channel" "${CONAN_CHANNEL}"
                         ${CONAN_SETTINGS}
                         ${CONAN_OPTIONS}
                         "${PROJECT_SOURCE_DIR}/test-conanfile.py"
@@ -298,11 +396,12 @@ if("${USE_CONAN}")
     endif()
 endif()
 
-if("${${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES}" STREQUAL "")
-    if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+if("${${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES}" STREQUAL "" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT "${SKIP_TEST}")
         list(APPEND "${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES"
             "GTest"
             "exqudens-cpp-log"
+            "exqudens-cpp-usb"
         )
     endif()
 endif()
@@ -318,6 +417,11 @@ foreach(cmakePackageName IN LISTS "${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${${PROJECT_NAME}_CMAKE_PACKAGE_${cmakePackageName}_VERSION}" EXACT QUIET)
     elseif("exqudens-cpp-log" STREQUAL "${cmakePackageName}")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}Config.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}-config.cmake")
+        list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
+        find_package("${cmakePackageName}" "${${PROJECT_NAME}_CMAKE_PACKAGE_${cmakePackageName}_VERSION}" EXACT QUIET)
+    elseif("exqudens-cpp-usb" STREQUAL "${cmakePackageName}")
         file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}Config.cmake")
         file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}-config.cmake")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
@@ -373,27 +477,20 @@ add_custom_target("st-cube-clean"
             SRC_STRING "int main(void)"
             DST_STRING "int32_t main_init(void)"
 
-    COMMAND "${CMAKE_COMMAND}" "-P" "cmake/util.cmake" "--" "file_copy_string_replace"
-            SRC_FILE "${CUBE_OUTPUT_DIR}/st/STM32H7A3XX_FLASH.ld"
-            DST_FILE "${PROJECT_SOURCE_DIR}/STM32H7A3XX_FLASH.ld"
-            SRC_STRING " (READONLY)"
-            DST_STRING ""
-    COMMAND "${CMAKE_COMMAND}" "-P" "cmake/util.cmake" "--" "file_copy_string_from"
-            SRC_FILE "${CUBE_OUTPUT_DIR}/st/cmake/gcc-arm-none-eabi.cmake"
-            DST_FILE "${PROJECT_SOURCE_DIR}/flags.cmake"
-            SRC_STRING "# MCU specific flags"
+    COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-f"
+            "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt"
+            "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/LICENSE.txt"
+            "${CUBE_OUTPUT_DIR}/st/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt"
+            "${CUBE_OUTPUT_DIR}/st/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt"
+            "${CUBE_OUTPUT_DIR}/st/.mxproject"
+            "${CUBE_OUTPUT_DIR}/st/CMakeLists.txt"
+            "${CUBE_OUTPUT_DIR}/st/CMakePresets.json"
+            "${CUBE_OUTPUT_DIR}/st/st.ioc"
+            #"${CUBE_OUTPUT_DIR}/st/STM32H7A3XX_FLASH.ld"
 
-    COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-rf" "${CUBE_OUTPUT_DIR}/st/cmake"
-                                               "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/Device/ST/STM32H7xx/Source"
-    COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-f" "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/Device/ST/STM32H7xx/LICENSE.txt"
-                                              "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/LICENSE.txt"
-                                              "${CUBE_OUTPUT_DIR}/st/Drivers/STM32H7xx_HAL_Driver/LICENSE.txt"
-                                              "${CUBE_OUTPUT_DIR}/st/Middlewares/ST/STM32_USB_Device_Library/LICENSE.txt"
-                                              "${CUBE_OUTPUT_DIR}/st/.mxproject"
-                                              "${CUBE_OUTPUT_DIR}/st/CMakeLists.txt"
-                                              "${CUBE_OUTPUT_DIR}/st/CMakePresets.json"
-                                              "${CUBE_OUTPUT_DIR}/st/st.ioc"
-                                              "${CUBE_OUTPUT_DIR}/st/STM32H7A3XX_FLASH.ld"
+    COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-rf"
+            "${CUBE_OUTPUT_DIR}/st/cmake"
+            "${CUBE_OUTPUT_DIR}/st/Drivers/CMSIS/Device/ST/STM32H7xx/Source"
 
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     USES_TERMINAL
@@ -408,11 +505,16 @@ add_custom_target("st-cube"
     VERBATIM
 )
 
+set(ST_CUBE_ONLY "0" CACHE BOOL "...")
+if("${ST_CUBE_ONLY}")
+    return()
+endif()
+
 configure_file("${PROJECT_SOURCE_DIR}/versions.hpp.in" "${PROJECT_BINARY_DIR}/generated/src/main/cpp/${BASE_DIR}/versions.hpp" @ONLY NEWLINE_STYLE UNIX)
 add_library("${PROJECT_NAME}-hal"
     "src/main/cpp/exqudens/embedded/usb/hal/IHardware.hpp"
-    "src/main/cpp/exqudens/embedded/usb/hal/HardwareUtils.hpp"
-    "src/main/cpp/exqudens/embedded/usb/hal/HardwareUtils.cpp"
+    "src/main/cpp/exqudens/embedded/usb/hal/HardwareFactory.hpp"
+    "src/main/cpp/exqudens/embedded/usb/hal/HardwareFactory.cpp"
 )
 generate_export_header("${PROJECT_NAME}-hal" BASE_NAME "${BASE_MACRO}_HAL" EXPORT_FILE_NAME "generated/src/main/cpp/${BASE_DIR}/hal/export.hpp")
 if(NOT "${BUILD_SHARED_LIBS}")
@@ -427,12 +529,12 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "src/main/c/st/Core/Inc/gpio.h"
         "src/main/c/st/Core/Src/gpio.c"
         "src/main/c/st/Core/Inc/main.h"
-        #"src/main/c/st/Core/Src/main.c"
+        #"src/main/c/st/Core/Src/main.c" # include next line instead
         "src/main/c/exqudens/embedded/usb/hal/Core/Src/main.c"
         "src/main/c/st/Core/Inc/memorymap.h"
         "src/main/c/st/Core/Src/memorymap.c"
         "src/main/c/st/Core/Inc/stm32h7xx_it.h"
-        #"src/main/c/st/Core/Src/stm32h7xx_it.c"
+        #"src/main/c/st/Core/Src/stm32h7xx_it.c" # will be included in app
         "src/main/c/st/Core/Src/stm32h7xx_hal_msp.c"
         "src/main/c/st/Core/Src/syscalls.c"
         "src/main/c/st/Core/Src/sysmem.c"
@@ -534,7 +636,7 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "src/main/c/st/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c"
 
         "src/main/c/st/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h"
-        #"src/main/c/st/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c"
+        #"src/main/c/st/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c" # include next line instead
         "src/main/c/exqudens/embedded/usb/hal/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c"
 
         "src/main/c/st/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h"
@@ -549,7 +651,7 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "src/main/c/st/USB_DEVICE/App/usb_device.h"
         "src/main/c/st/USB_DEVICE/App/usb_device.c"
         "src/main/c/st/USB_DEVICE/App/usbd_cdc_if.h"
-        #"src/main/c/st/USB_DEVICE/App/usbd_cdc_if.c"
+        #"src/main/c/st/USB_DEVICE/App/usbd_cdc_if.c" # include next line instead
         "src/main/c/exqudens/embedded/usb/hal/USB_DEVICE/App/usbd_cdc_if.c"
         "src/main/c/st/USB_DEVICE/App/usbd_desc.h"
         "src/main/c/st/USB_DEVICE/App/usbd_desc.c"
@@ -576,10 +678,9 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         target_compile_definitions("${PROJECT_NAME}-hal" PUBLIC "DEBUG")
     endif()
-
-    if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" AND EXISTS "${CMAKE_SOURCE_DIR}/flags.cmake")
-        include("${CMAKE_SOURCE_DIR}/flags.cmake")
-    endif()
+    target_link_libraries("${PROJECT_NAME}-hal" PUBLIC
+        "m"
+    )
 endif()
 target_include_directories("${PROJECT_NAME}-hal" PUBLIC
     "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated/src/main/cpp>"
@@ -607,6 +708,10 @@ set_target_properties("${PROJECT_NAME}-hal" PROPERTIES
 )
 
 add_library("${PROJECT_NAME}"
+    "src/main/cpp/exqudens/embedded/usb/util/UsbUtils.hpp"
+    "src/main/cpp/exqudens/embedded/usb/util/UsbUtils.cpp"
+    "src/main/cpp/exqudens/embedded/usb/service/TaskService.hpp"
+    "src/main/cpp/exqudens/embedded/usb/service/TaskService.cpp"
     "src/main/cpp/exqudens/embedded/usb/Application.hpp"
     "src/main/cpp/exqudens/embedded/usb/Application.cpp"
 )
@@ -650,7 +755,19 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     target_link_libraries("${PROJECT_NAME}-app"
         "${PROJECT_NAME}"
     )
+    string(JOIN " " "${PROJECT_NAME}-app_LINK_FLAGS"
+        "${TARGET_FLAGS}"
+        "-T"
+        "\"${PROJECT_SOURCE_DIR}/src/main/c/st/STM32H7A3XX_FLASH.ld\""
+        "--specs=nano.specs"
+        "-Wl,-Map=${PROJECT_NAME}-app.map"
+        "-Wl,--gc-sections"
+        "-Wl,--print-memory-usage"
+    )
     set_target_properties("${PROJECT_NAME}-app" PROPERTIES
+        LINK_FLAGS "${${PROJECT_NAME}-app_LINK_FLAGS}"
+        ADDITIONAL_CLEAN_FILES "${PROJECT_NAME}-app.map"
+
         RUNTIME_OUTPUT_DIRECTORY                "${PROJECT_BINARY_DIR}/main/bin"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE        "${PROJECT_BINARY_DIR}/main/bin"
         RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/main/bin"
@@ -687,7 +804,10 @@ if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "src/test/cpp/TestUtils.cpp"
         "src/test/cpp/TestApplication.hpp"
         "src/test/cpp/TestApplication.cpp"
-        "src/test/cpp/unit/FunctionalUnitTests.hpp"
+
+        "src/test/cpp/unit/UnitTests.hpp"
+
+        "src/test/cpp/system/SystemTests.hpp"
     )
     generate_export_header("test-lib"
         BASE_NAME "TEST_LIB"
@@ -705,6 +825,7 @@ if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "GTest::gmock_main"
         "GTest::gtest_main"
         "exqudens-cpp-log::exqudens-cpp-log"
+        "exqudens-cpp-usb::exqudens-cpp-usb"
     )
     set_target_properties("test-lib" PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY                "${PROJECT_BINARY_DIR}/test/bin"

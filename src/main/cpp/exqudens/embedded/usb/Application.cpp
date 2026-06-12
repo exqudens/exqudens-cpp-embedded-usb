@@ -1,95 +1,24 @@
-#include <cstring>
 #include <cstdlib>
-#include <algorithm>
 
 #include "exqudens/embedded/usb/Application.hpp"
+#include "exqudens/embedded/usb/service/TaskService.hpp"
 
 #ifdef USE_HAL_DRIVER
-#include <optional>
-
 #include "exqudens/embedded/usb/hal/Hardware.hpp"
+#include "exqudens/embedded/usb/hal/HardwareFactory.hpp"
 #endif
 
 namespace exqudens {
 
-    int Application::run() {
-        int result = EXIT_SUCCESS;
-
+    int32_t Application::run() {
 #ifdef USE_HAL_DRIVER
-        std::optional<Hardware> optionalHardware = {};
-
-        if (!hardware) {
-            optionalHardware.emplace(Hardware());
-            hardware = &optionalHardware.value();
-        }
+        Hardware hardware;
+        HardwareFactory::setHardware(&hardware);
 #endif
-
-        if (!hardware) {
-            result = EXIT_FAILURE;
-            return result;
-        }
-
-        hardware->setUsbReceiveCallback(&Application::usbCallback);
-
-        if (!hardware->getUsbReceiveCallback()) {
-            result = EXIT_FAILURE;
-            return result;
-        }
-
-        result = hardware->mainInit();
-
-        if (result != EXIT_SUCCESS) {
-            return result;
-        }
-
-        while (true) {
-            if (!hardware->getGreenLedState()) {
-                hardware->setGreenLedState(true);
-                hardware->delay(500);
-                hardware->setGreenLedState(false);
-                hardware->delay(500);
-            }
-            if (!hardware->getYellowLedState()) {
-                hardware->setYellowLedState(true);
-                hardware->delay(500);
-                hardware->setYellowLedState(false);
-                hardware->delay(500);
-            }
-            if (!hardware->getRedLedState()) {
-                hardware->setRedLedState(true);
-                hardware->delay(500);
-                hardware->setRedLedState(false);
-                hardware->delay(500);
-            }
-
-            hardware->delay(2000);
-        }
-
-        hardware = nullptr;
+        TaskService taskService;
+        int32_t result = taskService.run();
 
         return result;
-    }
-
-    IHardware* Application::getHardware() {
-        return hardware;
-    }
-
-    uint32_t Application::usbCallback(std::array<uint8_t, 1024>& buffer, uint32_t size) {
-        char string[1025] = "";
-        std::copy(buffer.begin(), buffer.end(), string);
-        if (std::strcmp("Hello", string) == 0) {
-            buffer.fill(0);
-            buffer.at(0) = 'H';
-            buffer.at(1) = 'i';
-            return 2;
-        } else {
-            for (uint32_t i = 0; i < size; i++) {
-                if (buffer.at(i) >= 'a' && buffer.at(i) <= 'z') {
-                    buffer.at(i) -= ('a' - 'A');
-                }
-            }
-            return size;
-        }
     }
 
 }

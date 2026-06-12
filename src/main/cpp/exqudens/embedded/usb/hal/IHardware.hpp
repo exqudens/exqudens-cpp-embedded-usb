@@ -12,8 +12,6 @@ namespace exqudens {
 
         public:
 
-            virtual std::array<char, 32> getVersion() = 0;
-
             virtual int32_t mainInit() = 0;
 
             virtual uint32_t getTick() = 0;

@@ -1,14 +1,13 @@
 #include <string.h>
 
 #include "exqudens/embedded/usb/hal/Hardware.hpp"
-#include "exqudens/embedded/usb/hal/HardwareUtils.hpp"
-#include "exqudens/embedded/usb/Application.hpp"
+#include "exqudens/embedded/usb/hal/HardwareFactory.hpp"
 #include "main.h"
 #include "usbd_cdc_if.h"
 
 extern "C" void CDC_Receive_HS_Callback(uint8_t* buffer, uint32_t* length) {
     uint32_t size = *length;
-    exqudens::IHardware* hardware = exqudens::Application::getHardware();
+    exqudens::IHardware* hardware = exqudens::HardwareFactory::getHardware();
     std::function<uint32_t(std::array<uint8_t, 1024>&, uint32_t)> usbReceiveCallback = {};
 
     if (hardware) {
@@ -32,10 +31,6 @@ extern "C" void CDC_Receive_HS_Callback(uint8_t* buffer, uint32_t* length) {
 }
 
 namespace exqudens {
-
-    std::array<char, 32> Hardware::getVersion() {
-        return HardwareUtils::getVersion();
-    }
 
     int32_t Hardware::mainInit() {
         if (!mainInitResult) {

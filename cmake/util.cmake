@@ -116,63 +116,6 @@ function(file_copy_string_replace)
     endif()
 endfunction()
 
-function(file_copy_string_from)
-    set(options)
-    set(oneValueKeywords
-        "SRC_FILE"
-        "DST_FILE"
-    )
-    set(multiValueKeywords
-        "SRC_STRING"
-    )
-
-    foreach(v IN LISTS "options" "oneValueKeywords" "multiValueKeywords")
-        unset("_${v}")
-    endforeach()
-
-    cmake_parse_arguments("" "${options}" "${oneValueKeywords}" "${multiValueKeywords}" "${ARGN}")
-
-    if(NOT "${_UNPARSED_ARGUMENTS}" STREQUAL "")
-        message(FATAL_ERROR "UNPARSED_ARGUMENTS: '${_UNPARSED_ARGUMENTS}'")
-    endif()
-
-    if("${_SRC_FILE}" STREQUAL "")
-        message(FATAL_ERROR "Empty SRC_FILE: '${_SRC_FILE}'")
-    endif()
-
-    if("${_DST_FILE}" STREQUAL "")
-        message(FATAL_ERROR "Empty DST_FILE: '${_DST_FILE}'")
-    endif()
-
-    if("${_SRC_STRING}" STREQUAL "")
-        message(FATAL_ERROR "Empty SRC_STRING: '${_SRC_STRING}'")
-    endif()
-
-    foreach(v IN LISTS "options" "oneValueKeywords" "multiValueKeywords")
-        list(LENGTH "_${v}" l)
-        if("${l}" GREATER "1")
-            message(STATUS "${v}:")
-            foreach(i IN LISTS "_${v}")
-                message(STATUS "'${i}'")
-            endforeach()
-        else()
-            message(STATUS "${v}: '${_${v}}'")
-        endif()
-    endforeach()
-
-    if(EXISTS "${_SRC_FILE}")
-        message(STATUS "generate: '${_DST_FILE}' ...")
-        file(READ "${_SRC_FILE}" content)
-        string(FIND "${content}" "${_SRC_STRING}" index)
-        if("${index}" STREQUAL "-1")
-            message(FATAL_ERROR "Not found SRC_STRING: '${_SRC_STRING}'")
-        endif()
-        string(SUBSTRING "${content}" "${index}" "-1" "content")
-        file(WRITE "${_DST_FILE}" "${content}")
-        message(STATUS "generate: '${_DST_FILE}' ... done")
-    endif()
-endfunction()
-
 function(vscode)
     set(options)
     set(oneValueKeywords

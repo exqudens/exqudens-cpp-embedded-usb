@@ -15,8 +15,6 @@ namespace exqudens {
 
         public:
 
-            std::array<char, 32> getVersion() override;
-
             int32_t mainInit() override;
 
             uint32_t getTick() override;

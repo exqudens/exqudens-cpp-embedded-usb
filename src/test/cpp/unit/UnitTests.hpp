@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-#include <exception>
 #include <algorithm>
 
 #include <gmock/gmock.h>
@@ -9,29 +7,29 @@
 #include <exqudens/Log.hpp>
 
 #include "TestUtils.hpp"
-#include "exqudens/embedded/usb/Application.hpp"
+#include "exqudens/embedded/usb/util/UsbUtils.hpp"
 
-class FunctionalUnitTests: public testing::Test {
+class UnitTests: public testing::Test {
 
     public:
 
-        inline static const char* LOGGER_ID = "FunctionalUnitTests";
+        inline static const char* LOGGER_ID = "UnitTests";
 
 };
 
-TEST_F(FunctionalUnitTests, test1) {
+TEST_F(UnitTests, test1) {
     try {
         std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
         std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
         EXQUDENS_LOG_INFO(LOGGER_ID) << "bgn";
 
-        std::string expected = "ABC123";
-        EXQUDENS_LOG_INFO(LOGGER_ID) << "expected: '" << expected << "'";
         std::string input = "abc123";
         EXQUDENS_LOG_INFO(LOGGER_ID) << "input: '" << input << "'";
+        std::string expected = TestUtils::toUpper(input);
+        EXQUDENS_LOG_INFO(LOGGER_ID) << "expected: '" << expected << "'";
         std::array<uint8_t, 1024> buffer = {};
         std::copy(input.begin(), input.end(), buffer.data());
-        exqudens::Application::usbCallback(buffer, (uint32_t) input.size());
+        exqudens::UsbUtils::usbCallback(buffer, (uint32_t) input.size());
         std::string actual = std::string(buffer.begin(), buffer.end()).c_str();
         EXQUDENS_LOG_INFO(LOGGER_ID) << "actual: '" << actual << "'";
 

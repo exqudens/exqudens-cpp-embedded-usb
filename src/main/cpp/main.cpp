@@ -1,5 +1,7 @@
 #include "exqudens/embedded/usb/Application.hpp"
 
 int main() {
-    return exqudens::Application::run();
+    int32_t result = exqudens::Application::run();
+    while (1) {}
+    return result;
 }
