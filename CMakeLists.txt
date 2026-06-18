@@ -223,6 +223,27 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     )]]
 
     #set(TOOLCHAIN_LINK_LIBRARIES "m")
+elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
+    set(CMAKE_C_STANDARD "11")
+    set(CMAKE_C_STANDARD_REQUIRED "1")
+    set(CMAKE_C_EXTENSIONS "0")
+
+    set(CMAKE_CXX_STANDARD "20")
+    set(CMAKE_CXX_STANDARD_REQUIRED "1")
+    set(CMAKE_CXX_EXTENSIONS "0")
+
+    string(JOIN " " COVERAGE_FLAGS
+        "-fprofile-instr-generate"
+        "-fcoverage-mapping"
+        "-fcoverage-mcdc"
+        "-O0"
+    )
+
+    string(JOIN " " CMAKE_C_FLAGS_DEBUG "${COVERAGE_FLAGS}")
+    string(JOIN " " CMAKE_CXX_FLAGS_DEBUG "${COVERAGE_FLAGS}")
+
+    find_program(LLVM_PROFDATA_COMMAND NAMES "llvm-profdata.exe" "llvm-profdata" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+    find_program(LLVM_COV_COMMAND NAMES "llvm-cov.exe" "llvm-cov" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
 else()
     set(CMAKE_C_STANDARD "11")
     set(CMAKE_C_STANDARD_REQUIRED "1")
@@ -745,6 +766,7 @@ set_target_properties("${PROJECT_NAME}" PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL     "${PROJECT_BINARY_DIR}/main/lib"
     LIBRARY_OUTPUT_DIRECTORY_DEBUG          "${PROJECT_BINARY_DIR}/main/lib"
 )
+get_target_property("${PROJECT_NAME}_SOURCES" "${PROJECT_NAME}" "SOURCES")
 
 if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     add_executable("${PROJECT_NAME}-app"
@@ -909,7 +931,7 @@ if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         PROPERTIES ENVIRONMENT "PATH=$<TARGET_FILE_DIR:test-app>;${ENV_PATH}"
     )
 
-    set(TEST_GROUP "all" CACHE STRING "...")
+    set(TEST_GROUP ".*UnitTests" CACHE STRING "...")
     message(STATUS "TEST_GROUP: '${TEST_GROUP}'")
     set(TEST_CASE "all" CACHE STRING "...")
     message(STATUS "TEST_CASE: '${TEST_CASE}'")
@@ -927,6 +949,8 @@ if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
 
     add_custom_command(
         OUTPUT "${PROJECT_BINARY_DIR}/junit.xml"
+               "${PROJECT_BINARY_DIR}/test/bin/default.profraw"
+        COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-f" "${PROJECT_BINARY_DIR}/test/bin/default.profraw"
         COMMAND "${CMAKE_CTEST_COMMAND}"
                 "--build-nocmake"
                 "--output-junit" "${PROJECT_BINARY_DIR}/junit.xml"
@@ -947,6 +971,36 @@ if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
 
     set(IDE_TARGET_DEPENDS_ON "test-app")
     message(STATUS "IDE_TARGET_DEPENDS_ON: '${IDE_TARGET_DEPENDS_ON}'")
+endif()
+
+if("clang" IN_LIST "PRESET_NAME_ELEMENTS" AND "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_custom_target("cmake-test-coverage"
+        COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-f" "${PROJECT_BINARY_DIR}/test/bin/default.profdata"
+        COMMAND "${CMAKE_COMMAND}" "-E" "rm" "-rf" "${PROJECT_BINARY_DIR}/test/report"
+        COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${PROJECT_BINARY_DIR}/test/report/json"
+        COMMAND "${LLVM_PROFDATA_COMMAND}" "merge" "-sparse" "${PROJECT_BINARY_DIR_REL}/test/bin/default.profraw" "-o" "${PROJECT_BINARY_DIR_REL}/test/bin/default.profdata"
+        COMMAND "${LLVM_COV_COMMAND}" "show"
+                "-show-mcdc"
+                "-format" "html"
+                "-instr-profile" "${PROJECT_BINARY_DIR_REL}/test/bin/default.profdata"
+                "-object" "${PROJECT_BINARY_DIR_REL}/test/bin/$<TARGET_FILE_NAME:test-app>"
+                "-output-dir" "${PROJECT_BINARY_DIR_REL}/test/report/html"
+        COMMAND "${LLVM_COV_COMMAND}" "report"
+                "-show-functions"
+                "-instr-profile" "${PROJECT_BINARY_DIR_REL}/test/bin/default.profdata"
+                "-object" "${PROJECT_BINARY_DIR_REL}/test/bin/$<TARGET_FILE_NAME:test-app>"
+                "-sources" "src/main/cpp/exqudens/embedded/usb/util/UsbUtils.cpp"
+        COMMAND "${LLVM_COV_COMMAND}" "export"
+                "-format" "text"
+                "-instr-profile" "${PROJECT_BINARY_DIR_REL}/test/bin/default.profdata"
+                "-object" "${PROJECT_BINARY_DIR_REL}/test/bin/$<TARGET_FILE_NAME:test-app>"
+                "-sources" "src/main/cpp/exqudens/embedded/usb/util/UsbUtils.cpp"
+                ">" "${PROJECT_BINARY_DIR_REL}/test/report/json/llvm-cov-export.json"
+        DEPENDS "${PROJECT_BINARY_DIR}/test/bin/default.profraw"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        USES_TERMINAL
+        VERBATIM
+    )
 endif()
 
 add_custom_target("vscode"
