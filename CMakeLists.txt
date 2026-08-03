@@ -8,9 +8,9 @@ message(STATUS "USE_CONAN: '${USE_CONAN}'")
 string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
 if("${USE_CONAN}")
     if("windows" IN_LIST "PRESET_NAME_ELEMENTS")
-        find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
     else()
-        find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
     endif()
     message(STATUS "CONAN_COMMAND: '${CONAN_COMMAND}'")
     set(CONAN_USER "exqudens" CACHE STRING "...")
@@ -65,7 +65,7 @@ if("msvc-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
     endif()
 elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-toolchain.cmake")
-        find_file(COMPILER_FILE NAMES "gcc" PATHS ENV GCC_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        find_file(COMPILER_FILE NAMES "gcc" PATHS ENV GCC_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
         set_gnu_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
@@ -75,7 +75,7 @@ elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
     endif()
 elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/clang-toolchain.cmake")
-        find_file(COMPILER_FILE NAMES "clang.exe" "clang" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        find_file(COMPILER_FILE NAMES "clang.exe" "clang" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
         set_clang_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
@@ -85,13 +85,27 @@ elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
     endif()
 elseif("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-arm-toolchain.cmake")
-        find_file(COMPILER_FILE NAMES "arm-none-eabi-gcc.exe" "arm-none-eabi-gcc" PATHS ENV GCC_ARM_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        find_file(COMPILER_FILE NAMES "arm-none-eabi-gcc.exe" "arm-none-eabi-gcc" PATHS ENV GCC_ARM_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
         set_gnu_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "armv7"
             OS "Generic"
             PATH "${COMPILER_FILE}"
             TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY"
             OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-arm-toolchain.cmake"
+        )
+    endif()
+elseif("clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/clang-gcc-arm-toolchain.cmake")
+        find_file(COMPILER_FILE NAMES "clang.exe" "clang" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+        find_file(BACK_COMPILER_FILE NAMES "arm-none-eabi-gcc.exe" "arm-none-eabi-gcc" PATHS ENV GCC_ARM_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+        set_clang_toolchain(TOOLCHAIN_CONTENT
+            PROCESSOR "armv7"
+            OS "Generic"
+            PATH "${COMPILER_FILE}"
+            BACK_PATH "${BACK_COMPILER_FILE}"
+            TARGET "arm-none-eabi"
+            TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY"
+            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/clang-gcc-arm-toolchain.cmake"
         )
     endif()
 endif()
@@ -159,7 +173,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH "0")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "0")
 set(CMAKE_CXX_VISIBILITY_PRESET "hidden") # "default" or "hidden"
 set(CMAKE_VISIBILITY_INLINES_HIDDEN "1")
-if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" OR "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     set(CMAKE_C_STANDARD "11")
     set(CMAKE_C_STANDARD_REQUIRED "1")
     set(CMAKE_C_EXTENSIONS "1")
@@ -223,6 +237,20 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     )]]
 
     #set(TOOLCHAIN_LINK_LIBRARIES "m")
+    if("clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+        string(JOIN " " COVERAGE_FLAGS
+            "-fprofile-instr-generate"
+            "-fcoverage-mapping"
+            "-fcoverage-mcdc"
+            "-O0"
+        )
+
+        string(JOIN " " CMAKE_C_FLAGS_DEBUG "${COVERAGE_FLAGS}")
+        string(JOIN " " CMAKE_CXX_FLAGS_DEBUG "${COVERAGE_FLAGS}")
+
+        find_program(LLVM_PROFDATA_COMMAND NAMES "llvm-profdata.exe" "llvm-profdata" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+        find_program(LLVM_COV_COMMAND NAMES "llvm-cov.exe" "llvm-cov" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+    endif()
 elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
     set(CMAKE_C_STANDARD "11")
     set(CMAKE_C_STANDARD_REQUIRED "1")
@@ -242,8 +270,8 @@ elseif("clang" IN_LIST "PRESET_NAME_ELEMENTS")
     string(JOIN " " CMAKE_C_FLAGS_DEBUG "${COVERAGE_FLAGS}")
     string(JOIN " " CMAKE_CXX_FLAGS_DEBUG "${COVERAGE_FLAGS}")
 
-    find_program(LLVM_PROFDATA_COMMAND NAMES "llvm-profdata.exe" "llvm-profdata" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
-    find_program(LLVM_COV_COMMAND NAMES "llvm-cov.exe" "llvm-cov" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+    find_program(LLVM_PROFDATA_COMMAND NAMES "llvm-profdata.exe" "llvm-profdata" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+    find_program(LLVM_COV_COMMAND NAMES "llvm-cov.exe" "llvm-cov" PATHS ENV CLANG_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
 else()
     set(CMAKE_C_STANDARD "11")
     set(CMAKE_C_STANDARD_REQUIRED "1")
@@ -326,7 +354,7 @@ if("${USE_CONAN}")
         "&:shared=${CONAN_BUILD_SHARED_LIBS}"
         "*:shared=${CONAN_BUILD_SHARED_LIBS}"
     )
-    if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" AND NOT "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         if("${CONAN_OS}" STREQUAL "Windows" AND "clang" IN_LIST "PRESET_NAME_ELEMENTS")
             list(APPEND "CONAN_SETTINGS"
                 "--settings" "gtest/*:compiler=msvc"
@@ -417,7 +445,7 @@ if("${USE_CONAN}")
     endif()
 endif()
 
-if("${${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES}" STREQUAL "" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+if("${${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES}" STREQUAL "" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" AND NOT "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     if(NOT "${SKIP_TEST}")
         list(APPEND "${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES"
             "GTest"
@@ -469,9 +497,9 @@ string(TOUPPER "${BASE_MACRO}" BASE_MACRO)
 set(CUBE_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/src/main/c")
 set(IOC_FILE "${CUBE_OUTPUT_DIR}/st/st.ioc")
 
-find_program(STM_CUBE_FILE NAMES "STM32CubeMX.exe" "STM32CubeMX" PATHS ENV STM_CUBE_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
-find_program(STM_CUBE_JAVA NAMES "java.exe" "java" PATHS "${STM_CUBE_FILE}/../jre/bin" REQUIRED NO_CACHE NO_DEFAULT_PATH)
-find_program(OPENOCD_COMMAND NAMES "openocd.exe" "openocd" PATHS ENV OPEN_OCD_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+find_program(STM_CUBE_FILE NAMES "STM32CubeMX.exe" "STM32CubeMX" PATHS ENV STM_CUBE_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
+find_program(STM_CUBE_JAVA NAMES "java.exe" "java" PATHS "${STM_CUBE_FILE}/../jre/bin" REQUIRED NO_DEFAULT_PATH)
+find_program(OPENOCD_COMMAND NAMES "openocd.exe" "openocd" PATHS ENV OPEN_OCD_PATH ENV PATH REQUIRED NO_DEFAULT_PATH)
 
 message(STATUS "BASE_DIR: '${BASE_DIR}'")
 message(STATUS "BASE_MACRO: '${BASE_MACRO}'")
@@ -541,8 +569,8 @@ generate_export_header("${PROJECT_NAME}-hal" BASE_NAME "${BASE_MACRO}_HAL" EXPOR
 if(NOT "${BUILD_SHARED_LIBS}")
     target_compile_definitions("${PROJECT_NAME}-hal" PUBLIC "${BASE_MACRO}_HAL_STATIC_DEFINE")
 endif()
-if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
-    target_sources("${PROJECT_NAME}-hal" PUBLIC
+if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" OR "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+    target_sources("${PROJECT_NAME}-hal" PRIVATE
         "src/main/cpp/exqudens/embedded/usb/hal/Hardware.hpp"
         "src/main/cpp/exqudens/embedded/usb/hal/Hardware.cpp"
 
@@ -557,8 +585,6 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
         "src/main/c/st/Core/Inc/stm32h7xx_it.h"
         #"src/main/c/st/Core/Src/stm32h7xx_it.c" # will be included in app
         "src/main/c/st/Core/Src/stm32h7xx_hal_msp.c"
-        "src/main/c/st/Core/Src/syscalls.c"
-        "src/main/c/st/Core/Src/sysmem.c"
         "src/main/c/st/Core/Src/system_stm32h7xx.c"
 
         "src/main/c/st/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7a3xxq.h"
@@ -768,9 +794,11 @@ set_target_properties("${PROJECT_NAME}" PROPERTIES
 )
 get_target_property("${PROJECT_NAME}_SOURCES" "${PROJECT_NAME}" "SOURCES")
 
-if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" OR "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     add_executable("${PROJECT_NAME}-app"
         "src/main/cpp/main.cpp"
+        "src/main/c/st/Core/Src/syscalls.c"
+        "src/main/c/st/Core/Src/sysmem.c"
         "src/main/c/st/Core/Src/stm32h7xx_it.c"
         "src/main/c/st/startup_stm32h7a3xxq.s"
     )
@@ -820,7 +848,7 @@ if("gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     message(STATUS "IDE_TARGET_DEPENDS_ON: '${IDE_TARGET_DEPENDS_ON}'")
 endif()
 
-if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
+if(NOT "${SKIP_TEST}" AND NOT "gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS" AND NOT "clang-gcc-arm" IN_LIST "PRESET_NAME_ELEMENTS")
     add_library("test-lib"
         "src/test/cpp/TestUtils.hpp"
         "src/test/cpp/TestUtils.cpp"

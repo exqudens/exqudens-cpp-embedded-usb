@@ -1,8 +1,9 @@
 # exqudens-cpp-embedded-usb
 
 -   Uses board: `NUCLEO-H7A3ZI-Q`
--   Uses MCU: `STM32H7A3ZI`
+-   Uses MCU: `STM32H7A3ZITxQ`
 -   Requires: `cmake`, `ninja`, `STM32CubeMX`, `openocd`
+-   Uses `stm32cubeide` version `2.2.0`
 
 ## how-to-configure
 

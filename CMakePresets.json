@@ -105,6 +105,16 @@
                 }
             }
         },
+        {
+            "name": "clang-gcc-arm",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": {
+                    "type": "FILEPATH",
+                    "value": "build/clang-gcc-arm-toolchain.cmake"
+                }
+            }
+        },
 
         {
             "name": "interface",
@@ -207,21 +217,25 @@
         },
         {
             "name": "windows.ninja.msvc-x64-x64.debug.static",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "msvc-x64-x64", "debug", "static", "mtd"],
             "binaryDir": "${sourceDir}/build/001"
         },
         {
             "name": "windows.ninja.msvc-x64-x64.release.static",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "msvc-x64-x64", "release", "static", "mt"],
             "binaryDir": "${sourceDir}/build/002"
         },
         {
             "name": "windows.ninja.msvc-x64-x64.debug.shared",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "msvc-x64-x64", "debug", "shared", "mdd"],
             "binaryDir": "${sourceDir}/build/003"
         },
         {
             "name": "windows.ninja.msvc-x64-x64.release.shared",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "msvc-x64-x64", "release", "shared", "md"],
             "binaryDir": "${sourceDir}/build/004"
         },
@@ -234,21 +248,25 @@
         },
         {
             "name": "windows.ninja.clang.debug.static",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "clang", "debug", "static", "mtd"],
             "binaryDir": "${sourceDir}/build/011"
         },
         {
             "name": "windows.ninja.clang.release.static",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "clang", "release", "static", "mt"],
             "binaryDir": "${sourceDir}/build/012"
         },
         {
             "name": "windows.ninja.clang.debug.shared",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "clang", "debug", "shared", "mdd"],
             "binaryDir": "${sourceDir}/build/013"
         },
         {
             "name": "windows.ninja.clang.release.shared",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "clang", "release", "shared", "md"],
             "binaryDir": "${sourceDir}/build/014"
         },
@@ -261,6 +279,7 @@
         },
         {
             "name": "windows.ninja.gcc-arm.debug.static",
+            "hidden": false,
             "inherits": ["default", "windows", "ninja", "gcc-arm", "debug", "static"],
             "binaryDir": "${sourceDir}/build/021"
         },
@@ -284,6 +303,37 @@
         },
 
         {
+            "name": "windows.ninja.clang-gcc-arm.interface",
+            "hidden": true,
+            "inherits": ["default", "windows", "ninja", "clang-gcc-arm", "interface", "debug", "static", "mtd"],
+            "binaryDir": "${sourceDir}/build/030"
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.static",
+            "hidden": false,
+            "inherits": ["default", "windows", "ninja", "clang-gcc-arm", "debug", "static", "mtd"],
+            "binaryDir": "${sourceDir}/build/031"
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.static",
+            "hidden": true,
+            "inherits": ["default", "windows", "ninja", "clang-gcc-arm", "release", "static", "mt"],
+            "binaryDir": "${sourceDir}/build/032"
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.shared",
+            "hidden": true,
+            "inherits": ["default", "windows", "ninja", "clang-gcc-arm", "debug", "shared", "mdd"],
+            "binaryDir": "${sourceDir}/build/033"
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.shared",
+            "hidden": true,
+            "inherits": ["default", "windows", "ninja", "clang-gcc-arm", "release", "shared", "md"],
+            "binaryDir": "${sourceDir}/build/034"
+        },
+
+        {
             "name": "linux.ninja.gcc.interface",
             "hidden": true,
             "inherits": ["default", "linux", "ninja", "gcc", "interface", "debug", "static"],
@@ -291,21 +341,25 @@
         },
         {
             "name": "linux.ninja.gcc.debug.static",
+            "hidden": false,
             "inherits": ["default", "linux", "ninja", "gcc", "debug", "static"],
             "binaryDir": "${sourceDir}/build/101"
         },
         {
             "name": "linux.ninja.gcc.release.static",
+            "hidden": false,
             "inherits": ["default", "linux", "ninja", "gcc", "release", "static"],
             "binaryDir": "${sourceDir}/build/102"
         },
         {
             "name": "linux.ninja.gcc.debug.shared",
+            "hidden": false,
             "inherits": ["default", "linux", "ninja", "gcc", "debug", "shared"],
             "binaryDir": "${sourceDir}/build/103"
         },
         {
             "name": "linux.ninja.gcc.release.shared",
+            "hidden": false,
             "inherits": ["default", "linux", "ninja", "gcc", "release", "shared"],
             "binaryDir": "${sourceDir}/build/104"
         },
@@ -318,21 +372,25 @@
         },
         {
             "name": "darwin.ninja.clang.debug.static",
+            "hidden": false,
             "inherits": ["default", "darwin", "ninja", "clang", "debug", "static"],
             "binaryDir": "${sourceDir}/build/201"
         },
         {
             "name": "darwin.ninja.clang.release.static",
+            "hidden": false,
             "inherits": ["default", "darwin", "ninja", "clang", "release", "static"],
             "binaryDir": "${sourceDir}/build/202"
         },
         {
             "name": "darwin.ninja.clang.debug.shared",
+            "hidden": false,
             "inherits": ["default", "darwin", "ninja", "clang", "debug", "shared"],
             "binaryDir": "${sourceDir}/build/203"
         },
         {
             "name": "darwin.ninja.clang.release.shared",
+            "hidden": false,
             "inherits": ["default", "darwin", "ninja", "clang", "release", "shared"],
             "binaryDir": "${sourceDir}/build/204"
         }
@@ -419,6 +477,32 @@
         {
             "name": "windows.ninja.gcc-arm.release.shared",
             "configurePreset": "windows.ninja.gcc-arm.release.shared",
+            "inherits": ["default"]
+        },
+
+        {
+            "name": "windows.ninja.clang-gcc-arm.interface",
+            "configurePreset": "windows.ninja.clang-gcc-arm.interface",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.static",
+            "configurePreset": "windows.ninja.clang-gcc-arm.debug.static",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.static",
+            "configurePreset": "windows.ninja.clang-gcc-arm.release.static",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.shared",
+            "configurePreset": "windows.ninja.clang-gcc-arm.debug.shared",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.shared",
+            "configurePreset": "windows.ninja.clang-gcc-arm.release.shared",
             "inherits": ["default"]
         },
 
@@ -569,6 +653,32 @@
         {
             "name": "windows.ninja.gcc-arm.release.shared",
             "configurePreset": "windows.ninja.gcc-arm.release.shared",
+            "inherits": ["default"]
+        },
+
+        {
+            "name": "windows.ninja.clang-gcc-arm.interface",
+            "configurePreset": "windows.ninja.clang-gcc-arm.interface",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.static",
+            "configurePreset": "windows.ninja.clang-gcc-arm.debug.static",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.static",
+            "configurePreset": "windows.ninja.clang-gcc-arm.release.static",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.debug.shared",
+            "configurePreset": "windows.ninja.clang-gcc-arm.debug.shared",
+            "inherits": ["default"]
+        },
+        {
+            "name": "windows.ninja.clang-gcc-arm.release.shared",
+            "configurePreset": "windows.ninja.clang-gcc-arm.release.shared",
             "inherits": ["default"]
         },
 

@@ -2,6 +2,7 @@
 .idea/
 .vs/
 .vscode/
+.settings/*
 build/
 tmp/
 
@@ -13,3 +14,6 @@ tmp/
 CMakeUserPresets.json
 CMakeSettings.json
 nohup.out
+
+# Not-Files
+!.settings/org.eclipse.core.resources.prefs
